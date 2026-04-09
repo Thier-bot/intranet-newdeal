@@ -23,11 +23,27 @@ jobs:
 
       - name: Scan vulnerabilites image
         run: |
-          trivy image ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+          trivy image \
+            --exit-code 1 \
+            --severity CRITICAL \
+            ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
 
       - name: Scan secrets dans le code
         run: |
           trivy fs --scanners secret .
+
+      - name: Notification echec scan
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ [CD] Vulnerabilite CRITICAL bloquee - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Deploiement bloque en production : vulnerabilite CRITICAL detectee dans l'image Docker."
 
   deploy:
     runs-on: self-hosted
@@ -51,4 +67,31 @@ jobs:
 
       - name: Deployer le container
         run: |
-          docker run -d --name intranet -p 80:80 --restart always ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+          docker run -d --name intranet -p 80:80 --restart always \
+            ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+
+      - name: Notification succes deploiement
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ [CD] Deploiement reussi - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Le site Intranet New Deal a ete deploye avec succes en production sur le port 80."
+
+      - name: Notification echec deploiement
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ [CD] Deploiement echoue - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Le deploiement en production a echoue. Consultez GitHub Actions pour les details."
