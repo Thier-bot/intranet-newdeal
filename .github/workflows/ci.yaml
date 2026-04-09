@@ -8,18 +8,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Récupérer le code
+      - name: Recuperer le code
         uses: actions/checkout@v3
 
       - name: Build image Docker
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest .
 
+      - name: Notification echec build
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ [CI] Build echoue - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Le job Build a echoue sur la branche dev. Consultez GitHub Actions pour les details."
+
   security-scan:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Récupérer le code
+      - name: Recuperer le code
         uses: actions/checkout@v3
 
       - name: Installer Trivy
@@ -31,20 +44,36 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y trivy
 
-      - name: Scan vulnérabilités image
+      - name: Scan vulnerabilites - BLOQUER si CRITICAL
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest .
-          trivy image ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+          trivy image \
+            --exit-code 1 \
+            --severity CRITICAL \
+            ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
 
       - name: Scan secrets dans le code
         run: |
           trivy fs --scanners secret .
 
+      - name: Notification echec scan
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ [CI] Vulnerabilite CRITICAL detectee - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Une vulnerabilite CRITICAL a ete detectee sur la branche dev. Le pipeline est bloque."
+
   push:
     runs-on: ubuntu-latest
     needs: security-scan
     steps:
-      - name: Récupérer le code
+      - name: Recuperer le code
         uses: actions/checkout@v3
 
       - name: Login Docker Hub
@@ -55,3 +84,29 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+
+      - name: Notification succes
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ [CI] Pipeline reussi - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Le pipeline CI sur la branche dev s'est termine avec succes. L'image a ete poussee sur Docker Hub."
+
+      - name: Notification echec push
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ [CI] Push echoue - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: "Le job Push vers Docker Hub a echoue sur la branche dev."
