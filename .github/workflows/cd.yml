@@ -1,0 +1,54 @@
+name: CD Pipeline - Prod
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v3
+
+      - name: Installer Trivy
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y wget apt-transport-https gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y
+          sudo apt-get install -y trivy
+
+      - name: Scan vulnerabilites image
+        run: |
+          trivy image ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+
+      - name: Scan secrets dans le code
+        run: |
+          trivy fs --scanners secret .
+
+  deploy:
+    runs-on: self-hosted
+    needs: security-scan
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v3
+
+      - name: Login Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Pull image Docker
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
+
+      - name: Arreter ancien container
+        run: |
+          docker stop intranet || true
+          docker rm intranet || true
+
+      - name: Deployer le container
+        run: |
+          docker run -d --name intranet -p 80:80 --restart always ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:latest
