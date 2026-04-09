@@ -25,7 +25,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ [CI] Build echoue - intranet-newdeal"
           to: moussawade@groupeisi.com
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <thiernomoussaba7@gmail.com>
           body: "Le job Build a echoue sur la branche dev. Consultez GitHub Actions pour les details."
 
   security-scan:
@@ -66,7 +66,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ [CI] Vulnerabilite CRITICAL detectee - intranet-newdeal"
           to: moussawade@groupeisi.com
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <thiernomoussaba7@gmail.com>
           body: "Une vulnerabilite CRITICAL a ete detectee sur la branche dev. Le pipeline est bloque."
 
   push:
@@ -95,7 +95,7 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "✅ [CI] Pipeline reussi - intranet-newdeal"
           to: moussawade@groupeisi.com
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <thiernomoussaba7@gmail.com>
           body: "Le pipeline CI sur la branche dev s'est termine avec succes. L'image a ete poussee sur Docker Hub."
 
       - name: Notification echec push
@@ -108,5 +108,5 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "❌ [CI] Push echoue - intranet-newdeal"
           to: moussawade@groupeisi.com
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: GitHub Actions <thiernomoussaba7@gmail.com>
           body: "Le job Push vers Docker Hub a echoue sur la branche dev."
